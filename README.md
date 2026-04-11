@@ -1,50 +1,68 @@
-# Welcome to your Expo app 👋
+# SPIC
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo de comunicação alternativa para crianças com TEA (Transtorno do Espectro Autista) baseado no método PECS (Picture Exchange Communication System).
 
-## Get started
+O SPIC permite que terapeutas e familiares criem categorias e imagens personalizadas para auxiliar a comunicação de crianças não-verbais ou com dificuldades de fala, seguindo o fluxo de troca por figuras do método PECS.
 
-1. Install dependencies
+## Tecnologias
+
+- **React Native** + **Expo** (SDK 54)
+- **TypeScript**
+- **Firebase** (Authentication, Cloud Firestore, Storage)
+- **React Navigation** (native-stack)
+
+## Instalação
+
+1. Clone o repositório:
+
+   ```bash
+   git clone <url-do-repo>
+   cd spic-app
+   ```
+
+2. Instale as dependências:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+3. Configure as variáveis de ambiente:
+
+   Copie o arquivo `.env.example` para `.env` e preencha com as credenciais reais do seu projeto Firebase e do Google OAuth:
 
    ```bash
-   npx expo start
+   cp .env.example .env
    ```
 
-In the output, you'll find options to open the app in a
+   Variáveis necessárias:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   - `EXPO_PUBLIC_FIREBASE_API_KEY`
+   - `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`
+   - `EXPO_PUBLIC_FIREBASE_PROJECT_ID`
+   - `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`
+   - `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+   - `EXPO_PUBLIC_FIREBASE_APP_ID`
+   - `EXPO_PUBLIC_GOOGLE_CLIENT_ID`
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+   > **Importante**: o `.env` nunca deve ser commitado. Ele está listado no `.gitignore`.
 
-## Get a fresh project
+4. Inicie o app:
 
-When you're ready, run:
+   ```bash
+   npx expo start --go
+   ```
 
-```bash
-npm run reset-project
+   - Pressione `w` para abrir no navegador
+   - Escaneie o QR code com o Expo Go no celular (Android/iOS)
+
+## Estrutura
+
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+src/
+  config/       # Firebase e configurações
+  contexts/     # AuthContext (estado global de autenticação)
+  navigation/   # Stack navigators (Auth e App)
+  screens/      # Telas organizadas por fluxo (auth, onboarding, app)
+  services/     # Serviços de Firestore (categorias, imagens, auth)
+  types/        # Tipagens compartilhadas
+```
