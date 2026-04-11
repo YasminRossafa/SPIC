@@ -15,22 +15,22 @@
       "package": "com.yasminrossafa.spicapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/Logo_Spic-sf.png",
+        "backgroundImage": "./assets/images/Logo_Spic-sf.png",
+        "monochromeImage": "./assets/images/Logo_Spic-sf.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/Logo_Spic-sf.png.png"
+      "favicon": "./assets/images/Logo_Spic-sf.png"
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/Logo_Spic-sf.png.png",
+          "image": "./assets/images/Logo_Spic-sf.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
