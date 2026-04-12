@@ -67,8 +67,9 @@ export default function LoginScreen() {
     clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID as string,
     androidClientId: "1008645452527-24nh16dm2l1sanjnt6lh3oeh17ubbndj.apps.googleusercontent.com",
     redirectUri: AuthSession.makeRedirectUri({
-      useProxy: true,
-    } as any),
+      scheme: "com.yasminrossafa.spicapp",
+      native: "com.yasminrossafa.spicapp:/",
+    }),
   });
 
   // Processa a resposta do Google OAuth quando retorna
