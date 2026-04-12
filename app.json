@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "spic-app",
+    "name": "SPIC",
     "slug": "spic-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/Logo_Spic-sf.png",
+    "icon": "./assets/images/Logo1.png",
     "scheme": "com.yasminrossafa.spicapp",
     "userInterfaceStyle": "automatic",
     "ios": {

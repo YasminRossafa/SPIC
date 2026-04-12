@@ -38,9 +38,16 @@ export async function criarImagem(
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error("Usuário não autenticado");
 
-  // Converte a URI local em blob para upload
-  const response = await fetch(imageUri);
-  const blob = await response.blob();
+  // Converte a URI local em blob para upload via XMLHttpRequest
+  // (mais compatível com React Native nativo que fetch)
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = () => resolve(xhr.response);
+    xhr.onerror = () => reject(new Error("Falha ao converter imagem"));
+    xhr.responseType = "blob";
+    xhr.open("GET", imageUri, true);
+    xhr.send(null);
+  });
 
   // Define o caminho no Storage
   const storageRef = ref(
