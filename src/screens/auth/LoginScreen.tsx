@@ -65,6 +65,7 @@ export default function LoginScreen() {
   // Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID as string,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID as string,
     redirectUri: AuthSession.makeRedirectUri({
       useProxy: true,
     } as any),

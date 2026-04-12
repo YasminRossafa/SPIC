@@ -7,7 +7,6 @@
     "icon": "./assets/images/Logo_Spic-sf.png",
     "scheme": "spic-app",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -19,7 +18,6 @@
         "backgroundImage": "./assets/images/Logo_Spic-sf.png",
         "monochromeImage": "./assets/images/Logo_Spic-sf.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {

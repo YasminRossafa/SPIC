@@ -63,6 +63,7 @@ export default function RegisterScreen() {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID as string,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID as string,
     redirectUri: AuthSession.makeRedirectUri({
       useProxy: true,
     } as any),
