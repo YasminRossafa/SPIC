@@ -14,7 +14,7 @@
       "package": "com.yasminrossafa.spicapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/Logo_Spic-sf.png",
+        "foregroundImage": "./assets/images/Logo1.png",
         "backgroundImage": "./assets/images/Logo_Spic-sf.png",
         "monochromeImage": "./assets/images/Logo_Spic-sf.png"
       },

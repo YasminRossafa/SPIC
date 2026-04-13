@@ -64,11 +64,13 @@ export default function LoginScreen() {
   // TODO: Substituir pelo Web client ID do Firebase Console
   // Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID as string,
+    clientId: "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com",
     androidClientId: "1008645452527-24nh16dm2l1sanjnt6lh3oeh17ubbndj.apps.googleusercontent.com",
-    redirectUri: AuthSession.makeRedirectUri({
-      scheme: "com.yasminrossafa.spicapp",
-      native: "com.yasminrossafa.spicapp:/",
+    ...(Platform.OS !== "android" && {
+      redirectUri: AuthSession.makeRedirectUri({
+        scheme: "com.yasminrossafa.spicapp",
+        native: "com.yasminrossafa.spicapp:/",
+      }),
     }),
   });
 
