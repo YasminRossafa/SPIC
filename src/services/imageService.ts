@@ -11,7 +11,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { ref, uploadBytes, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { db, auth, storage } from "../config/firebase";
 import { Imagem } from "../types";

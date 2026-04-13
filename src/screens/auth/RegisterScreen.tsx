@@ -1,6 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
@@ -61,14 +60,9 @@ export default function RegisterScreen() {
   const [carregando, setCarregando] = useState(false);
 
 
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "com.yasminrossafa.spicapp",
-  });
-  console.log("Google OAuth redirectUri:", redirectUri);
-
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com",
-    redirectUri,
+    androidClientId: "1008645452527-24nh16dm2l1sanjnt6lh3oeh17ubbndj.apps.googleusercontent.com",
   });
 
   // Processa a resposta do Google OAuth quando retorna
