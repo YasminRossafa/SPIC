@@ -10,7 +10,9 @@ import {
   serverTimestamp,
   onSnapshot,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytes, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
+import * as FileSystem from "expo-file-system";
+import { Platform } from "react-native";
 import { db, auth, storage } from "../config/firebase";
 import { Imagem } from "../types";
 
@@ -38,24 +40,30 @@ export async function criarImagem(
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error("Usuário não autenticado");
 
-  // Converte a URI local em blob para upload via XMLHttpRequest
-  // (mais compatível com React Native nativo que fetch)
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = () => resolve(xhr.response);
-    xhr.onerror = () => reject(new Error("Falha ao converter imagem"));
-    xhr.responseType = "blob";
-    xhr.open("GET", imageUri, true);
-    xhr.send(null);
-  });
-
   // Define o caminho no Storage
   const storageRef = ref(
     storage,
     `usuarios/${uid}/categorias/${categoriaId}/${Date.now()}.jpg`
   );
-  await uploadBytes(storageRef, blob);
-  const storageUrl = await getDownloadURL(storageRef);
+
+  let storageUrl: string;
+  if (Platform.OS === "web") {
+    // Na web, fetch + blob funciona normalmente
+    const resp = await fetch(imageUri);
+    const blob = await resp.blob();
+    await uploadBytes(storageRef, blob);
+    storageUrl = await getDownloadURL(storageRef);
+  } else {
+    // No mobile nativo, lê o arquivo local como base64 via expo-file-system
+    // e faz upload com uploadString (evita problemas com XHR/fetch em URIs locais)
+    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: "base64",
+    });
+    await uploadString(storageRef, base64, "base64", {
+      contentType: "image/jpeg",
+    });
+    storageUrl = await getDownloadURL(storageRef);
+  }
 
   // Salva os metadados no Firestore
   return addDoc(imagensRef(categoriaId), {

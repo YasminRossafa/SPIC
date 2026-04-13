@@ -63,15 +63,15 @@ export default function LoginScreen() {
 
   // TODO: Substituir pelo Web client ID do Firebase Console
   // Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: "com.yasminrossafa.spicapp",
+  });
+  // Log temporário — ver no terminal/logcat qual redirect URI está sendo gerado
+  console.log("Google OAuth redirectUri:", redirectUri);
+
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com",
-    androidClientId: "1008645452527-24nh16dm2l1sanjnt6lh3oeh17ubbndj.apps.googleusercontent.com",
-    ...(Platform.OS !== "android" && {
-      redirectUri: AuthSession.makeRedirectUri({
-        scheme: "com.yasminrossafa.spicapp",
-        native: "com.yasminrossafa.spicapp:/",
-      }),
-    }),
+    redirectUri,
   });
 
   // Processa a resposta do Google OAuth quando retorna
@@ -128,6 +128,11 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        {/* DEBUG temporário — mostra redirectUri na tela */}
+        <Text selectable style={{ fontSize: 10, color: "#999", textAlign: "center", marginBottom: 8 }}>
+          redirectUri: {redirectUri}
+        </Text>
+
         {/* Logo */}
         <View style={styles.logoContainer}>
           <Image
