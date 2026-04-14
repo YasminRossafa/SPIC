@@ -1,9 +1,8 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -21,6 +20,15 @@ import { auth } from "../../config/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { AuthStackParamList } from "../../navigation/AuthNavigator";
 
+const GOOGLE_WEB_CLIENT_ID =
+  "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com";
+
+// Configura o Google Sign-In nativo uma única vez (Android/iOS).
+// Precisa do webClientId para gerar o idToken aceito pelo Firebase.
+if (Platform.OS !== "web") {
+  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+}
+
 // Ícone oficial colorido do Google
 function GoogleIcon() {
   return (
@@ -33,9 +41,6 @@ function GoogleIcon() {
     </Svg>
   );
 }
-
-// Necessário para fechar o popup do navegador após o login OAuth
-WebBrowser.maybeCompleteAuthSession();
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, "Login">;
 
@@ -60,25 +65,6 @@ export default function LoginScreen() {
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
-  // TODO: Substituir pelo Web client ID do Firebase Console
-  // Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com",
-    androidClientId: "1008645452527-24nh16dm2l1sanjnt6lh3oeh17ubbndj.apps.googleusercontent.com",
-  });
-
-  // Processa a resposta do Google OAuth quando retorna
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      setCarregando(true);
-      loginComCredential(credential)
-        .catch((e: any) => setErro(traduzirErro(e.code)))
-        .finally(() => setCarregando(false));
-    }
-  }, [response]);
-
   async function handleLogin() {
     setErro("");
     setCarregando(true);
@@ -100,11 +86,19 @@ export default function LoginScreen() {
         const provider = new GoogleAuthProvider();
         await signInWithPopup(auth, provider);
       } else {
-        // No celular: usa expo-auth-session (response tratado no useEffect)
-        await promptAsync();
+        // No celular: usa SDK nativo do Google (sem custom URI scheme)
+        await GoogleSignin.hasPlayServices();
+        const info: any = await GoogleSignin.signIn();
+        const idToken = info?.data?.idToken ?? info?.idToken;
+        if (!idToken) throw new Error("Sem idToken do Google");
+        const credential = GoogleAuthProvider.credential(idToken);
+        await loginComCredential(credential);
       }
     } catch (error: any) {
-      if (error.code !== "auth/popup-closed-by-user") {
+      if (
+        error.code !== "auth/popup-closed-by-user" &&
+        error.code !== "SIGN_IN_CANCELLED"
+      ) {
         setErro("Não foi possível entrar com o Google. Tente novamente.");
       }
     } finally {
@@ -173,7 +167,7 @@ export default function LoginScreen() {
         <TouchableOpacity
           style={[styles.botaoGoogle, carregando && styles.botaoDesabilitado]}
           onPress={handleLoginGoogle}
-          disabled={carregando || !request}
+          disabled={carregando}
           activeOpacity={0.8}
         >
           <GoogleIcon />

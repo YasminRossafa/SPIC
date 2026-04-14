@@ -10,11 +10,13 @@ import {
   serverTimestamp,
   onSnapshot,
 } from "firebase/firestore";
-import { ref, uploadBytes, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { db, auth, storage } from "../config/firebase";
 import { Imagem } from "../types";
+
+const STORAGE_BUCKET = "spic-8a6ca.firebasestorage.app";
 
 // Retorna a referência da subcoleção de imagens de uma categoria
 function imagensRef(categoriaId: string) {
@@ -40,29 +42,48 @@ export async function criarImagem(
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error("Usuário não autenticado");
 
-  // Define o caminho no Storage
-  const storageRef = ref(
-    storage,
-    `usuarios/${uid}/categorias/${categoriaId}/${Date.now()}.jpg`
-  );
+  const storagePath = `usuarios/${uid}/categorias/${categoriaId}/${Date.now()}.jpg`;
 
   let storageUrl: string;
   if (Platform.OS === "web") {
-    // Na web, fetch + blob funciona normalmente
+    // Na web, fetch + blob funciona normalmente via SDK
+    const storageRef = ref(storage, storagePath);
     const resp = await fetch(imageUri);
     const blob = await resp.blob();
     await uploadBytes(storageRef, blob);
     storageUrl = await getDownloadURL(storageRef);
   } else {
-    // No mobile nativo, lê o arquivo local como base64 via expo-file-system
-    // e faz upload com uploadString (evita problemas com XHR/fetch em URIs locais)
-    const base64 = await FileSystem.readAsStringAsync(imageUri, {
-      encoding: "base64",
+    // No mobile nativo, envia o arquivo binário direto pela REST API do
+    // Firebase Storage (evita Blob/ArrayBuffer, que o Hermes não suporta)
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) throw new Error("Usuário não autenticado");
+
+    const uploadUrl =
+      `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o` +
+      `?uploadType=media&name=${encodeURIComponent(storagePath)}`;
+
+    const result = await FileSystem.uploadAsync(uploadUrl, imageUri, {
+      httpMethod: "POST",
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      headers: {
+        "Content-Type": "image/jpeg",
+        Authorization: `Firebase ${idToken}`,
+      },
     });
-    await uploadString(storageRef, base64, "base64", {
-      contentType: "image/jpeg",
-    });
-    storageUrl = await getDownloadURL(storageRef);
+
+    if (result.status < 200 || result.status >= 300) {
+      throw new Error(
+        `Falha no upload (HTTP ${result.status}): ${result.body}`
+      );
+    }
+
+    const parsed = JSON.parse(result.body);
+    const token = parsed?.downloadTokens;
+    if (!token) throw new Error("Resposta do Storage sem downloadTokens");
+
+    storageUrl =
+      `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/` +
+      `${encodeURIComponent(storagePath)}?alt=media&token=${token}`;
   }
 
   // Salva os metadados no Firestore

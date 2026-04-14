@@ -1,10 +1,9 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../../config/firebase";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -21,7 +20,12 @@ import Svg, { Path } from "react-native-svg";
 import { useAuth } from "../../contexts/AuthContext";
 import { AuthStackParamList } from "../../navigation/AuthNavigator";
 
-WebBrowser.maybeCompleteAuthSession();
+const GOOGLE_WEB_CLIENT_ID =
+  "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com";
+
+if (Platform.OS !== "web") {
+  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+}
 
 // Ícone oficial colorido do Google
 function GoogleIcon() {
@@ -59,27 +63,6 @@ export default function RegisterScreen() {
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com",
-    androidClientId: "1008645452527-24nh16dm2l1sanjnt6lh3oeh17ubbndj.apps.googleusercontent.com",
-  });
-
-  // Processa a resposta do Google OAuth quando retorna
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      setCarregando(true);
-      setNovoCadastro(true);
-      loginComCredential(credential)
-        .catch((e: any) => {
-          setNovoCadastro(false);
-          setErro(traduzirErro(e.code));
-        })
-        .finally(() => setCarregando(false));
-    }
-  }, [response]);
 
   // Validações locais antes de chamar o Firebase
   function validar(): string | null {
@@ -123,12 +106,21 @@ export default function RegisterScreen() {
         setNovoCadastro(true);
         await signInWithPopup(auth, provider);
       } else {
-        // No celular: usa expo-auth-session (response tratado no useEffect)
-        await promptAsync();
+        // No celular: usa SDK nativo do Google (sem custom URI scheme)
+        await GoogleSignin.hasPlayServices();
+        setNovoCadastro(true);
+        const info: any = await GoogleSignin.signIn();
+        const idToken = info?.data?.idToken ?? info?.idToken;
+        if (!idToken) throw new Error("Sem idToken do Google");
+        const credential = GoogleAuthProvider.credential(idToken);
+        await loginComCredential(credential);
       }
     } catch (error: any) {
       setNovoCadastro(false);
-      if (error.code !== "auth/popup-closed-by-user") {
+      if (
+        error.code !== "auth/popup-closed-by-user" &&
+        error.code !== "SIGN_IN_CANCELLED"
+      ) {
         setErro("Não foi possível cadastrar com o Google. Tente novamente.");
       }
     } finally {
@@ -217,7 +209,7 @@ export default function RegisterScreen() {
         <TouchableOpacity
           style={[styles.botaoGoogle, carregando && styles.botaoDesabilitado]}
           onPress={handleCadastrarGoogle}
-          disabled={carregando || !request}
+          disabled={carregando}
           activeOpacity={0.8}
         >
           <GoogleIcon />

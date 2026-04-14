@@ -91,7 +91,7 @@ export default function MenuDrawer({ visible, onClose }: MenuDrawerProps) {
       </TouchableWithoutFeedback>
 
       {/* Menu deslizante */}
-      <Animated.View style={[styles.menu, { left: translateX }]}>
+      <Animated.View style={[styles.menu, { transform: [{ translateX }] }]}>
         <SafeAreaView style={styles.menuInner}>
           {/* Logo no topo */}
           <View style={styles.logoContainer}>
@@ -170,6 +170,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     bottom: 0,
+    left: 0,
     width: MENU_WIDTH,
     backgroundColor: "#F5F5F5",
     zIndex: 1000,
