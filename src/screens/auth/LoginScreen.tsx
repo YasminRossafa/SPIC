@@ -20,8 +20,7 @@ import { auth } from "../../config/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { AuthStackParamList } from "../../navigation/AuthNavigator";
 
-const GOOGLE_WEB_CLIENT_ID =
-  "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com";
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
 
 // Configura o Google Sign-In nativo uma única vez (Android/iOS).
 // Precisa do webClientId para gerar o idToken aceito pelo Firebase.
@@ -88,6 +87,8 @@ export default function LoginScreen() {
       } else {
         // No celular: usa SDK nativo do Google (sem custom URI scheme)
         await GoogleSignin.hasPlayServices();
+        // Desloga sessão anterior para sempre exibir o seletor de contas
+        try { await GoogleSignin.signOut(); } catch {}
         const info: any = await GoogleSignin.signIn();
         const idToken = info?.data?.idToken ?? info?.idToken;
         if (!idToken) throw new Error("Sem idToken do Google");
