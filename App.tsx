@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { registerRootComponent } from "expo";
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
@@ -14,19 +14,23 @@ class ErrorBoundary extends React.Component<
 > {
   state: { error: string | null } = { error: null };
 
-  componentDidCatch(error: Error) {
-    this.setState({ error: error.message + "\n" + error.stack });
+  componentDidCatch() {}
+
+  static getDerivedStateFromError() {
+    return { error: "Algo deu errado" };
   }
 
   render() {
     if (this.state.error) {
       return (
-        <ScrollView style={{ flex: 1, padding: 20, marginTop: 50 }}>
-          <Text style={{ color: "red", fontWeight: "bold", fontSize: 16 }}>
-            ERRO:
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold", color: "#1A1A1A", marginBottom: 8 }}>
+            Ops! Algo deu errado.
           </Text>
-          <Text style={{ color: "red", fontSize: 12 }}>{this.state.error}</Text>
-        </ScrollView>
+          <Text style={{ fontSize: 14, color: "#6B6B6B", textAlign: "center" }}>
+            Feche e abra o aplicativo novamente.
+          </Text>
+        </View>
       );
     }
     return this.props.children;

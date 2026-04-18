@@ -20,8 +20,7 @@ import Svg, { Path } from "react-native-svg";
 import { useAuth } from "../../contexts/AuthContext";
 import { AuthStackParamList } from "../../navigation/AuthNavigator";
 
-const GOOGLE_WEB_CLIENT_ID =
-  "1008645452527-0qlhpffoj09s6p37h93qupebtjhemhph.apps.googleusercontent.com";
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
 
 if (Platform.OS !== "web") {
   GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
@@ -108,6 +107,7 @@ export default function RegisterScreen() {
       } else {
         // No celular: usa SDK nativo do Google (sem custom URI scheme)
         await GoogleSignin.hasPlayServices();
+        try { await GoogleSignin.signOut(); } catch {}
         setNovoCadastro(true);
         const info: any = await GoogleSignin.signIn();
         const idToken = info?.data?.idToken ?? info?.idToken;

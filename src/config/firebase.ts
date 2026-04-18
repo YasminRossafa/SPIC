@@ -6,14 +6,13 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { Platform } from "react-native";
 
-// Configuração do Firebase — valores hardcoded temporariamente para diagnóstico
 const firebaseConfig = {
-  apiKey: "AIzaSyCLmK2wMM7oj293QcMikuzpSUbOjAkOvcU",
-  authDomain: "spic-8a6ca.firebaseapp.com",
-  projectId: "spic-8a6ca",
-  storageBucket: "spic-8a6ca.firebasestorage.app",
-  messagingSenderId: "1008645452527",
-  appId: "1:1008645452527:web:9e8b5dd8faac65a502a11a",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID!,
 };
 
 // Inicializa o Firebase

@@ -16,7 +16,7 @@ import { Platform } from "react-native";
 import { db, auth, storage } from "../config/firebase";
 import { Imagem } from "../types";
 
-const STORAGE_BUCKET = "spic-8a6ca.firebasestorage.app";
+const STORAGE_BUCKET = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!;
 
 // Retorna a referência da subcoleção de imagens de uma categoria
 function imagensRef(categoriaId: string) {

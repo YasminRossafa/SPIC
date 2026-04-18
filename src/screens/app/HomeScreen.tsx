@@ -130,8 +130,8 @@ export default function HomeScreen() {
         if (expandedId === itemParaExcluir.categoriaId) setExpandedId(null);
         await excluirCategoria(itemParaExcluir.categoriaId);
       }
-    } catch (error) {
-      console.error("Erro ao excluir:", error);
+    } catch {
+      // Silencia — o Firestore listener já atualiza a UI
     } finally {
       setModalVisivel(false);
       // Não limpa itemParaExcluir aqui — evita que o texto do modal

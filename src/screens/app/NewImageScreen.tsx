@@ -79,9 +79,8 @@ export default function NewImageScreen() {
       // Upload para Storage + salva metadados no Firestore
       await criarImagem(categoriaId, tituloTrimmed, imageUri, Date.now());
       navigation.goBack();
-    } catch (error: any) {
-      const msg = error?.message || String(error);
-      Alert.alert("Erro", `Não foi possível salvar a imagem.\n\n${msg}`);
+    } catch {
+      Alert.alert("Erro", "Não foi possível salvar a imagem. Tente novamente.");
     } finally {
       setSalvando(false);
     }
