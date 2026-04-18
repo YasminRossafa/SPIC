@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, AntDesign } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { criarImagem } from "../../services/imageService";
 import { AppStackParamList } from "../../navigation/AppNavigator";
@@ -125,7 +125,8 @@ export default function NewImageScreen() {
           disabled={salvando}
           activeOpacity={0.8}
         >
-          <Text style={styles.botaoFotoTexto}>📸 Câmera</Text>
+          <AntDesign name="camera" size={20} color="#3B3BF5" style={{ marginRight: 6 }} />
+          <Text style={styles.botaoFotoTexto}>Câmera</Text>
         </TouchableOpacity>
       </View>
 
