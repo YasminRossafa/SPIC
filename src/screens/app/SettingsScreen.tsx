@@ -1,9 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  BackHandler,
+  Alert,
   Modal,
-  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -11,57 +11,69 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { db } from "../../config/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 
 const STORAGE_KEY_BLOQUEIO = "bloqueioSaida";
 const STORAGE_KEY_SOM = "semSons";
 
 export default function SettingsScreen() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [bloqueioSaida, setBloqueioSaida] = useState(false);
   const [semSons, setSemSons] = useState(false);
   const [modalLogout, setModalLogout] = useState(false);
 
-  // Carrega as preferências salvas no AsyncStorage ao montar a tela
+  // Carrega preferências: primeiro do Firestore (fonte de verdade),
+  // com fallback para AsyncStorage (offline / primeiro acesso)
   useEffect(() => {
     async function carregarPreferencias() {
       try {
+        if (user) {
+          const userDoc = await getDoc(doc(db, "usuarios", user.uid));
+          const data = userDoc.data();
+          if (data?.bloqueioSaida !== undefined || data?.semSons !== undefined) {
+            const bloqueio = data?.bloqueioSaida === true;
+            const som = data?.semSons === true;
+            setBloqueioSaida(bloqueio);
+            setSemSons(som);
+            // Sincroniza AsyncStorage com Firestore
+            await AsyncStorage.setItem(STORAGE_KEY_BLOQUEIO, String(bloqueio));
+            await AsyncStorage.setItem(STORAGE_KEY_SOM, String(som));
+            return;
+          }
+        }
+        // Fallback: AsyncStorage local
         const bloqueio = await AsyncStorage.getItem(STORAGE_KEY_BLOQUEIO);
         const som = await AsyncStorage.getItem(STORAGE_KEY_SOM);
         if (bloqueio !== null) setBloqueioSaida(bloqueio === "true");
         if (som !== null) setSemSons(som === "true");
       } catch {
-        // Silencia erros de leitura — usa valores default
+        // Usa valores default se ambas as leituras falharem
       }
     }
     carregarPreferencias();
-  }, []);
+  }, [user]);
 
-  // BackHandler no Android: quando "bloqueioSaida" está ativo,
-  // intercepta o botão de voltar do sistema e impede a saída do app.
-  // Retornar true no handler significa "eu tratei este evento, não propague".
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-
-    function onBackPress() {
-      if (bloqueioSaida) return true; // bloqueia o botão voltar
-      return false; // comportamento padrão
+  // Salva preferência em AsyncStorage (local) e Firestore (nuvem)
+  async function salvarPreferencia(chave: string, valor: boolean) {
+    await AsyncStorage.setItem(chave, String(valor));
+    if (user) {
+      try {
+        await setDoc(doc(db, "usuarios", user.uid), { [chave]: valor }, { merge: true });
+      } catch {
+        // Falha silenciosa no Firestore — o AsyncStorage já salvou localmente
+      }
     }
-
-    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-    return () => subscription.remove();
-  }, [bloqueioSaida]);
+  }
 
   async function toggleBloqueio(value: boolean) {
     setBloqueioSaida(value);
-    // Persiste a preferência no AsyncStorage para manter entre sessões
-    await AsyncStorage.setItem(STORAGE_KEY_BLOQUEIO, String(value));
+    await salvarPreferencia(STORAGE_KEY_BLOQUEIO, value);
   }
 
   async function toggleSom(value: boolean) {
     setSemSons(value);
-    // Persiste a preferência no AsyncStorage
-    await AsyncStorage.setItem(STORAGE_KEY_SOM, String(value));
+    await salvarPreferencia(STORAGE_KEY_SOM, value);
   }
 
   async function confirmarLogout() {
@@ -69,7 +81,7 @@ export default function SettingsScreen() {
     try {
       await logout();
     } catch {
-      // Erro silenciado — o onAuthStateChanged cuida do redirect
+      Alert.alert("Erro", "Não foi possível sair da conta. Tente novamente.");
     }
   }
 
