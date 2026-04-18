@@ -1,22 +1,26 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, AntDesign } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   useWindowDimensions,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../contexts/AuthContext";
 import { AppStackParamList } from "../../navigation/AppNavigator";
-import { excluirCategoria, ouvirCategorias } from "../../services/categoryService";
-import { excluirImagem, ouvirImagens } from "../../services/imageService";
+import { atualizarCategoria, excluirCategoria, ouvirCategorias } from "../../services/categoryService";
+import { atualizarImagem, excluirImagem, ouvirImagens, substituirFotoImagem } from "../../services/imageService";
 import { Categoria, Imagem } from "../../types";
 import MenuDrawer from "./MenuScreen";
 
@@ -44,9 +48,15 @@ export default function HomeScreen() {
   const [imagensPorCategoria, setImagensPorCategoria] = useState<Record<string, Imagem[]>>({});
   const [menuVisible, setMenuVisible] = useState(false);
 
-  // Estado do modal de exclusão
+  // Estado do modal de ações (excluir/editar)
   const [modalVisivel, setModalVisivel] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<ItemParaExcluir | null>(null);
+
+  // Estado do modal de edição
+  const [editModalVisivel, setEditModalVisivel] = useState(false);
+  const [editNome, setEditNome] = useState("");
+  const [editNovaImageUri, setEditNovaImageUri] = useState<string | null>(null);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   // Ref para guardar os unsubscribes dos listeners de imagens
   const imagensUnsubs = useRef<Record<string, () => void>>({});
@@ -136,6 +146,86 @@ export default function HomeScreen() {
       setModalVisivel(false);
       // Não limpa itemParaExcluir aqui — evita que o texto do modal
       // mude durante a animação de fade out
+    }
+  }
+
+  // Abre o modal de edição com os dados do item selecionado
+  function abrirEdicao() {
+    if (!itemParaExcluir) return;
+    setEditNome(itemParaExcluir.nome);
+    setEditNovaImageUri(null);
+    setModalVisivel(false);
+    setEditModalVisivel(true);
+  }
+
+  // Escolhe nova foto da galeria (só para imagens)
+  async function handleEscolherNovaFoto() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permissão necessária", "Precisamos de acesso às suas fotos.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setEditNovaImageUri(result.assets[0].uri);
+    }
+  }
+
+  // Tira nova foto com a câmera (só para imagens)
+  async function handleTirarNovaFoto() {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permissão necessária", "Precisamos de acesso à câmera.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setEditNovaImageUri(result.assets[0].uri);
+    }
+  }
+
+  // Salva as alterações de edição
+  async function confirmarEdicao() {
+    if (!itemParaExcluir) return;
+    const novoNome = editNome.trim();
+    if (!novoNome) {
+      Alert.alert("Atenção", "O nome não pode ficar vazio.");
+      return;
+    }
+
+    setSalvandoEdicao(true);
+    try {
+      if (itemParaExcluir.tipo === "categoria") {
+        await atualizarCategoria(itemParaExcluir.categoriaId, { nome: novoNome });
+      } else {
+        // Atualiza título
+        await atualizarImagem(
+          itemParaExcluir.categoriaId,
+          itemParaExcluir.imagemId!,
+          { titulo: novoNome }
+        );
+        // Se escolheu nova foto, substitui
+        if (editNovaImageUri) {
+          await substituirFotoImagem(
+            itemParaExcluir.categoriaId,
+            itemParaExcluir.imagemId!,
+            editNovaImageUri,
+            itemParaExcluir.storageUrl!
+          );
+        }
+      }
+      setEditModalVisivel(false);
+    } catch {
+      Alert.alert("Erro", "Não foi possível salvar. Tente novamente.");
+    } finally {
+      setSalvandoEdicao(false);
     }
   }
 
@@ -240,7 +330,7 @@ export default function HomeScreen() {
       {/* Menu lateral (drawer animado) */}
       <MenuDrawer visible={menuVisible} onClose={() => setMenuVisible(false)} />
 
-      {/* Modal de confirmação de exclusão — compatível com web e mobile */}
+      {/* Modal de ações (Editar / Excluir) */}
       <Modal
         visible={modalVisivel}
         transparent
@@ -253,15 +343,13 @@ export default function HomeScreen() {
               <View style={styles.modalCard}>
                 <Text style={styles.modalTitulo}>
                   {itemParaExcluir?.tipo === "imagem"
-                    ? "Excluir imagem"
-                    : "Excluir categoria"}
+                    ? "O que deseja fazer com esta imagem?"
+                    : "O que deseja fazer com esta categoria?"}
                 </Text>
                 <Text style={styles.modalMensagem}>
-                  {itemParaExcluir?.tipo === "imagem"
-                    ? "Deseja excluir esta imagem?"
-                    : "Todas as imagens desta categoria serão removidas. Tem certeza?"}
+                  {itemParaExcluir?.nome}
                 </Text>
-                <View style={styles.modalBotoes}>
+                <View style={styles.modalBotoes3}>
                   <TouchableOpacity
                     style={styles.modalBotaoCancelar}
                     onPress={() => setModalVisivel(false)}
@@ -270,11 +358,102 @@ export default function HomeScreen() {
                     <Text style={styles.modalBotaoCancelarTexto}>Cancelar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
+                    style={styles.modalBotaoEditar}
+                    onPress={abrirEdicao}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.modalBotaoEditarTexto}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={styles.modalBotaoExcluir}
                     onPress={confirmarExclusao}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.modalBotaoExcluirTexto}>Excluir</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Modal de edição */}
+      <Modal
+        visible={editModalVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !salvandoEdicao && setEditModalVisivel(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => !salvandoEdicao && setEditModalVisivel(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitulo}>
+                  {itemParaExcluir?.tipo === "imagem" ? "Editar imagem" : "Editar categoria"}
+                </Text>
+
+                <Text style={styles.editLabel}>
+                  {itemParaExcluir?.tipo === "imagem" ? "Título" : "Nome"}
+                </Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editNome}
+                  onChangeText={setEditNome}
+                  editable={!salvandoEdicao}
+                  autoFocus
+                />
+
+                {/* Troca de foto — só para imagens */}
+                {itemParaExcluir?.tipo === "imagem" && (
+                  <View style={styles.editImagemArea}>
+                    <Image
+                      source={{ uri: editNovaImageUri ?? itemParaExcluir.storageUrl }}
+                      style={styles.editImagemPreview}
+                    />
+                    <View style={styles.editBotoesFoto}>
+                      <TouchableOpacity
+                        style={styles.editTrocarFotoBtn}
+                        onPress={handleEscolherNovaFoto}
+                        disabled={salvandoEdicao}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="images-outline" size={20} color="#3B3BF5" style={{ marginRight: 6 }} />
+                        <Text style={styles.editTrocarFotoTexto}>Galeria</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.editTrocarFotoBtn}
+                        onPress={handleTirarNovaFoto}
+                        disabled={salvandoEdicao}
+                        activeOpacity={0.8}
+                      >
+                        <AntDesign name="camera" size={20} color="#3B3BF5" style={{ marginRight: 6 }} />
+                        <Text style={styles.editTrocarFotoTexto}>Câmera</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.modalBotoes}>
+                  <TouchableOpacity
+                    style={styles.modalBotaoCancelar}
+                    onPress={() => setEditModalVisivel(false)}
+                    disabled={salvandoEdicao}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.modalBotaoCancelarTexto}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBotaoSalvar, salvandoEdicao && styles.botaoDesabilitado]}
+                    onPress={confirmarEdicao}
+                    disabled={salvandoEdicao}
+                    activeOpacity={0.8}
+                  >
+                    {salvandoEdicao ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.modalBotaoSalvarTexto}>Salvar</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -459,5 +638,87 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  modalBotoes3: {
+    flexDirection: "row",
+    marginTop: 24,
+    gap: 8,
+  },
+  modalBotaoEditar: {
+    flex: 1,
+    backgroundColor: "#3B3BF5",
+    borderRadius: 8,
+    padding: 12,
+    alignItems: "center",
+  },
+  modalBotaoEditarTexto: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  modalBotaoSalvar: {
+    flex: 1,
+    backgroundColor: "#3B3BF5",
+    borderRadius: 8,
+    padding: 12,
+    alignItems: "center",
+  },
+  modalBotaoSalvarTexto: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  botaoDesabilitado: {
+    opacity: 0.6,
+  },
+  editLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1A1A1A",
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: "#CCCCCC",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: "#1A1A1A",
+    backgroundColor: "#FFFFFF",
+  },
+  editImagemArea: {
+    alignItems: "center",
+    marginTop: 20,
+    gap: 14,
+  },
+  editImagemPreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: "#D9D9D9",
+  },
+  editBotoesFoto: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    justifyContent: "center",
+  },
+  editTrocarFotoBtn: {
+    borderWidth: 1,
+    borderColor: "#3B3BF5",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  editTrocarFotoTexto: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#3B3BF5",
+    textAlign: "center",
   },
 });

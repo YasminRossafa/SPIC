@@ -32,67 +32,94 @@ function imagensRef(categoriaId: string) {
   );
 }
 
-// Faz upload da imagem para o Storage e salva os metadados no Firestore
+// Faz upload de um arquivo de imagem para o Storage e retorna a URL pública
+async function uploadParaStorage(
+  categoriaId: string,
+  imageUri: string
+): Promise<string> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error("Usuário não autenticado");
+
+  const storagePath = `usuarios/${uid}/categorias/${categoriaId}/${Date.now()}.jpg`;
+
+  if (Platform.OS === "web") {
+    const storageRef = ref(storage, storagePath);
+    const resp = await fetch(imageUri);
+    const blob = await resp.blob();
+    await uploadBytes(storageRef, blob);
+    return getDownloadURL(storageRef);
+  }
+
+  // Mobile: envia binário direto pela REST API do Firebase Storage
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) throw new Error("Usuário não autenticado");
+
+  const uploadUrl =
+    `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o` +
+    `?uploadType=media&name=${encodeURIComponent(storagePath)}`;
+
+  const result = await FileSystem.uploadAsync(uploadUrl, imageUri, {
+    httpMethod: "POST",
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      "Content-Type": "image/jpeg",
+      Authorization: `Firebase ${idToken}`,
+    },
+  });
+
+  if (result.status < 200 || result.status >= 300) {
+    throw new Error(`Falha no upload (HTTP ${result.status}): ${result.body}`);
+  }
+
+  const parsed = JSON.parse(result.body);
+  const token = parsed?.downloadTokens;
+  if (!token) throw new Error("Resposta do Storage sem downloadTokens");
+
+  return (
+    `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/` +
+    `${encodeURIComponent(storagePath)}?alt=media&token=${token}`
+  );
+}
+
+// Cria uma imagem nova (upload + metadados no Firestore)
 export async function criarImagem(
   categoriaId: string,
   titulo: string,
   imageUri: string,
   ordem: number
 ) {
-  const uid = auth.currentUser?.uid;
-  if (!uid) throw new Error("Usuário não autenticado");
-
-  const storagePath = `usuarios/${uid}/categorias/${categoriaId}/${Date.now()}.jpg`;
-
-  let storageUrl: string;
-  if (Platform.OS === "web") {
-    // Na web, fetch + blob funciona normalmente via SDK
-    const storageRef = ref(storage, storagePath);
-    const resp = await fetch(imageUri);
-    const blob = await resp.blob();
-    await uploadBytes(storageRef, blob);
-    storageUrl = await getDownloadURL(storageRef);
-  } else {
-    // No mobile nativo, envia o arquivo binário direto pela REST API do
-    // Firebase Storage (evita Blob/ArrayBuffer, que o Hermes não suporta)
-    const idToken = await auth.currentUser?.getIdToken();
-    if (!idToken) throw new Error("Usuário não autenticado");
-
-    const uploadUrl =
-      `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o` +
-      `?uploadType=media&name=${encodeURIComponent(storagePath)}`;
-
-    const result = await FileSystem.uploadAsync(uploadUrl, imageUri, {
-      httpMethod: "POST",
-      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-      headers: {
-        "Content-Type": "image/jpeg",
-        Authorization: `Firebase ${idToken}`,
-      },
-    });
-
-    if (result.status < 200 || result.status >= 300) {
-      throw new Error(
-        `Falha no upload (HTTP ${result.status}): ${result.body}`
-      );
-    }
-
-    const parsed = JSON.parse(result.body);
-    const token = parsed?.downloadTokens;
-    if (!token) throw new Error("Resposta do Storage sem downloadTokens");
-
-    storageUrl =
-      `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/` +
-      `${encodeURIComponent(storagePath)}?alt=media&token=${token}`;
-  }
-
-  // Salva os metadados no Firestore
+  const storageUrl = await uploadParaStorage(categoriaId, imageUri);
   return addDoc(imagensRef(categoriaId), {
     titulo,
     storageUrl,
     ordem,
     criadoEm: serverTimestamp(),
   });
+}
+
+// Substitui a foto de uma imagem existente (upload nova + deleta antiga)
+export async function substituirFotoImagem(
+  categoriaId: string,
+  imagemId: string,
+  novaImageUri: string,
+  storageUrlAntiga: string
+) {
+  const novaUrl = await uploadParaStorage(categoriaId, novaImageUri);
+
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error("Usuário não autenticado");
+  const docRef = doc(
+    db, "usuarios", uid, "categorias", categoriaId, "imagens", imagemId
+  );
+  await updateDoc(docRef, { storageUrl: novaUrl });
+
+  // Remove a imagem antiga do Storage
+  try {
+    const antigaRef = ref(storage, storageUrlAntiga);
+    await deleteObject(antigaRef);
+  } catch {
+    // Ignora se o arquivo antigo já não existe
+  }
 }
 
 // Lista todas as imagens de uma categoria, ordenadas
