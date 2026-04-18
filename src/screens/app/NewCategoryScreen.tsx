@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { criarCategoria } from "../../services/categoryService";
+import { criarCategoria, listarCategorias } from "../../services/categoryService";
 
 export default function NewCategoryScreen() {
   const navigation = useNavigation();
@@ -25,7 +25,9 @@ export default function NewCategoryScreen() {
 
     setSalvando(true);
     try {
-      await criarCategoria(nomeTrimmed, Date.now());
+      const existentes = await listarCategorias();
+      const maiorOrdem = existentes.reduce((max, c) => Math.max(max, c.ordem), 0);
+      await criarCategoria(nomeTrimmed, maiorOrdem + 1);
       navigation.goBack();
     } catch {
       Alert.alert("Erro", "Não foi possível criar a categoria. Tente novamente.");

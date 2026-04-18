@@ -18,6 +18,36 @@ import { Imagem } from "../types";
 
 const STORAGE_BUCKET = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!;
 
+// Tamanho máximo permitido para upload: 5 MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+// Extensões de imagem aceitas
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".heic"];
+
+// Valida a URI da imagem antes do upload (extensão e tamanho no mobile)
+async function validarImagem(imageUri: string): Promise<void> {
+  // No web, URIs do ImagePicker são blob: ou data: — não possuem extensão.
+  // A validação de tipo é feita pelo próprio ImagePicker (mediaTypes: ["images"]).
+  const isWebUri = imageUri.startsWith("blob:") || imageUri.startsWith("data:");
+
+  if (!isWebUri) {
+    // Mobile: valida extensão pelo nome do arquivo
+    const extensao = imageUri.substring(imageUri.lastIndexOf(".")).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.some((ext) => extensao.startsWith(ext))) {
+      throw new Error(
+        `Formato não suportado. Use: ${ALLOWED_EXTENSIONS.join(", ")}`
+      );
+    }
+
+    // Mobile: verifica o tamanho do arquivo via FileSystem
+    const info = await FileSystem.getInfoAsync(imageUri);
+    if (info.exists && info.size && info.size > MAX_IMAGE_SIZE) {
+      throw new Error(
+        `Imagem muito grande (${(info.size / 1024 / 1024).toFixed(1)} MB). O limite é 5 MB.`
+      );
+    }
+  }
+}
+
 // Retorna a referência da subcoleção de imagens de uma categoria
 function imagensRef(categoriaId: string) {
   const uid = auth.currentUser?.uid;
@@ -39,6 +69,8 @@ async function uploadParaStorage(
 ): Promise<string> {
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error("Usuário não autenticado");
+
+  await validarImagem(imageUri);
 
   const storagePath = `usuarios/${uid}/categorias/${categoriaId}/${Date.now()}.jpg`;
 

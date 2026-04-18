@@ -12,7 +12,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { Ionicons, AntDesign } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { criarImagem } from "../../services/imageService";
+import { criarImagem, listarImagens } from "../../services/imageService";
 import { AppStackParamList } from "../../navigation/AppNavigator";
 
 type NewImageRoute = RouteProp<AppStackParamList, "NewImage">;
@@ -76,10 +76,14 @@ export default function NewImageScreen() {
 
     setSalvando(true);
     try {
+      // Calcula próxima ordem sequencial
+      const existentes = await listarImagens(categoriaId);
+      const maiorOrdem = existentes.reduce((max, img) => Math.max(max, img.ordem), 0);
       // Upload para Storage + salva metadados no Firestore
-      await criarImagem(categoriaId, tituloTrimmed, imageUri, Date.now());
+      await criarImagem(categoriaId, tituloTrimmed, imageUri, maiorOrdem + 1);
       navigation.goBack();
-    } catch {
+    } catch (e) {
+      console.error("Erro ao salvar imagem:", e);
       Alert.alert("Erro", "Não foi possível salvar a imagem. Tente novamente.");
     } finally {
       setSalvando(false);

@@ -1,13 +1,15 @@
 import { Ionicons, AntDesign } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   FlatList,
-  Image,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +18,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../contexts/AuthContext";
 import { AppStackParamList } from "../../navigation/AppNavigator";
@@ -51,15 +54,13 @@ export default function HomeScreen() {
   // Estado do modal de ações (excluir/editar)
   const [modalVisivel, setModalVisivel] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<ItemParaExcluir | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   // Estado do modal de edição
   const [editModalVisivel, setEditModalVisivel] = useState(false);
   const [editNome, setEditNome] = useState("");
   const [editNovaImageUri, setEditNovaImageUri] = useState<string | null>(null);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
-
-  // Ref para guardar os unsubscribes dos listeners de imagens
-  const imagensUnsubs = useRef<Record<string, () => void>>({});
 
   // Listener em tempo real para categorias
   useEffect(() => {
@@ -68,29 +69,40 @@ export default function HomeScreen() {
     return () => unsub();
   }, [user]);
 
-  // Quando uma categoria é expandida, inicia listener de imagens
+  // Quando uma categoria é expandida, inicia listener de imagens;
+  // ao recolher (expandedId muda), cancela o listener anterior.
   useEffect(() => {
     if (!expandedId) return;
-
-    // Evita criar listener duplicado
-    if (imagensUnsubs.current[expandedId]) return;
 
     const unsub = ouvirImagens(expandedId, (imgs) => {
       setImagensPorCategoria((prev) => ({ ...prev, [expandedId]: imgs }));
     });
-    imagensUnsubs.current[expandedId] = unsub;
 
     return () => {
-      // Cleanup ao desmontar (não ao recolher, para manter cache)
+      unsub();
     };
   }, [expandedId]);
 
-  // Cleanup de todos os listeners de imagens ao desmontar
+  // Bloqueio do botão voltar do Android quando a preferência está ativa.
+  // Lê a preferência do AsyncStorage e intercepta o BackHandler globalmente.
+  const [bloqueioSaida, setBloqueioSaida] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem("bloqueioSaida").then((v) => {
+        setBloqueioSaida(v === "true");
+      });
+    }, [])
+  );
+
   useEffect(() => {
-    return () => {
-      Object.values(imagensUnsubs.current).forEach((unsub) => unsub());
-    };
-  }, []);
+    if (Platform.OS !== "android") return;
+    function onBackPress() {
+      return bloqueioSaida; // true = bloqueia, false = comportamento padrão
+    }
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => sub.remove();
+  }, [bloqueioSaida]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -121,6 +133,7 @@ export default function HomeScreen() {
   // Executa a exclusão após confirmação no modal
   async function confirmarExclusao() {
     if (!itemParaExcluir) return;
+    setExcluindo(true);
     try {
       if (itemParaExcluir.tipo === "imagem") {
         await excluirImagem(
@@ -129,23 +142,20 @@ export default function HomeScreen() {
           itemParaExcluir.storageUrl!
         );
       } else {
-        // Remove listener de imagens dessa categoria antes de excluir
-        imagensUnsubs.current[itemParaExcluir.categoriaId]?.();
-        delete imagensUnsubs.current[itemParaExcluir.categoriaId];
+        // Recolhe a categoria para cancelar o listener via useEffect cleanup
+        if (expandedId === itemParaExcluir.categoriaId) setExpandedId(null);
         setImagensPorCategoria((prev) => {
           const copy = { ...prev };
           delete copy[itemParaExcluir.categoriaId];
           return copy;
         });
-        if (expandedId === itemParaExcluir.categoriaId) setExpandedId(null);
         await excluirCategoria(itemParaExcluir.categoriaId);
       }
     } catch {
-      // Silencia — o Firestore listener já atualiza a UI
+      Alert.alert("Erro", "Não foi possível excluir. Tente novamente.");
     } finally {
+      setExcluindo(false);
       setModalVisivel(false);
-      // Não limpa itemParaExcluir aqui — evita que o texto do modal
-      // mude durante a animação de fade out
     }
   }
 
@@ -213,16 +223,22 @@ export default function HomeScreen() {
         );
         // Se escolheu nova foto, substitui
         if (editNovaImageUri) {
-          await substituirFotoImagem(
-            itemParaExcluir.categoriaId,
-            itemParaExcluir.imagemId!,
-            editNovaImageUri,
-            itemParaExcluir.storageUrl!
-          );
+          try {
+            await substituirFotoImagem(
+              itemParaExcluir.categoriaId,
+              itemParaExcluir.imagemId!,
+              editNovaImageUri,
+              itemParaExcluir.storageUrl!
+            );
+          } catch (e) {
+            console.error("Erro ao trocar foto:", e);
+            Alert.alert("Aviso", "O título foi atualizado, mas não foi possível trocar a foto.");
+          }
         }
       }
       setEditModalVisivel(false);
-    } catch {
+    } catch (e) {
+      console.error("Erro ao salvar edição:", e);
       Alert.alert("Erro", "Não foi possível salvar. Tente novamente.");
     } finally {
       setSalvandoEdicao(false);
@@ -247,6 +263,8 @@ export default function HomeScreen() {
               <Image
                 source={{ uri: img.storageUrl }}
                 style={[styles.imagemThumb, { height: alturaImagem }]}
+                contentFit="cover"
+                transition={200}
               />
               <Text style={styles.imagemTitulo} numberOfLines={1}>
                 {img.titulo}
@@ -337,7 +355,7 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => setModalVisivel(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setModalVisivel(false)}>
+        <TouchableWithoutFeedback onPress={() => !excluindo && setModalVisivel(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalCard}>
@@ -353,6 +371,7 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     style={styles.modalBotaoCancelar}
                     onPress={() => setModalVisivel(false)}
+                    disabled={excluindo}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.modalBotaoCancelarTexto}>Cancelar</Text>
@@ -360,16 +379,22 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     style={styles.modalBotaoEditar}
                     onPress={abrirEdicao}
+                    disabled={excluindo}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.modalBotaoEditarTexto}>Editar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.modalBotaoExcluir}
+                    style={[styles.modalBotaoExcluir, excluindo && styles.botaoDesabilitado]}
                     onPress={confirmarExclusao}
+                    disabled={excluindo}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.modalBotaoExcluirTexto}>Excluir</Text>
+                    {excluindo ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.modalBotaoExcluirTexto}>Excluir</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -410,6 +435,8 @@ export default function HomeScreen() {
                     <Image
                       source={{ uri: editNovaImageUri ?? itemParaExcluir.storageUrl }}
                       style={styles.editImagemPreview}
+                      contentFit="cover"
+                      transition={200}
                     />
                     <View style={styles.editBotoesFoto}>
                       <TouchableOpacity
