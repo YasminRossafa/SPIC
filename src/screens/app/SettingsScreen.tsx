@@ -92,7 +92,7 @@ export default function SettingsScreen() {
         <View style={styles.itemTextos}>
           <Text style={styles.itemTitulo}>Bloquear saída do app</Text>
           <Text style={styles.itemDescricao}>
-            Impede que a criança saia do app acidentalmente
+            Impede que a criança saia do app acidentalmente (em breve)
           </Text>
         </View>
         <Switch
