@@ -56,6 +56,9 @@ export default function HomeScreen() {
   const [itemParaExcluir, setItemParaExcluir] = useState<ItemParaExcluir | null>(null);
   const [excluindo, setExcluindo] = useState(false);
 
+  // Estado do modal de confirmação de exclusão
+  const [confirmDeleteVisivel, setConfirmDeleteVisivel] = useState(false);
+
   // Estado do modal de edição
   const [editModalVisivel, setEditModalVisivel] = useState(false);
   const [editNome, setEditNome] = useState("");
@@ -130,6 +133,12 @@ export default function HomeScreen() {
     setModalVisivel(true);
   }
 
+  // Abre o modal de confirmação de exclusão
+  function abrirConfirmacaoExclusao() {
+    setModalVisivel(false);
+    setConfirmDeleteVisivel(true);
+  }
+
   // Executa a exclusão após confirmação no modal
   async function confirmarExclusao() {
     if (!itemParaExcluir) return;
@@ -155,7 +164,7 @@ export default function HomeScreen() {
       Alert.alert("Erro", "Não foi possível excluir. Tente novamente.");
     } finally {
       setExcluindo(false);
-      setModalVisivel(false);
+      setConfirmDeleteVisivel(false);
     }
   }
 
@@ -371,18 +380,60 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     style={styles.modalBotaoCancelar}
                     onPress={() => setModalVisivel(false)}
-                    disabled={excluindo}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.modalBotaoCancelarTexto}>Cancelar</Text>
+                    <Text style={styles.modalBotaoCancelarTexto} numberOfLines={1}>Cancelar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.modalBotaoEditar}
                     onPress={abrirEdicao}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.modalBotaoEditarTexto} numberOfLines={1}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.modalBotaoExcluir}
+                    onPress={abrirConfirmacaoExclusao}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.modalBotaoExcluirTexto} numberOfLines={1}>Excluir</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Modal de confirmação de exclusão */}
+      <Modal
+        visible={confirmDeleteVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !excluindo && setConfirmDeleteVisivel(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => !excluindo && setConfirmDeleteVisivel(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitulo}>
+                  {itemParaExcluir?.tipo === "imagem"
+                    ? "Excluir imagem?"
+                    : "Excluir categoria?"}
+                </Text>
+                <Text style={styles.modalMensagem}>
+                  {itemParaExcluir?.tipo === "imagem"
+                    ? "Esta imagem será removida permanentemente."
+                    : "Todas as imagens desta categoria serão removidas permanentemente. Esta ação não pode ser desfeita."}
+                </Text>
+                <View style={styles.modalBotoes}>
+                  <TouchableOpacity
+                    style={styles.modalBotaoCancelar}
+                    onPress={() => setConfirmDeleteVisivel(false)}
                     disabled={excluindo}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.modalBotaoEditarTexto}>Editar</Text>
+                    <Text style={styles.modalBotaoCancelarTexto}>Cancelar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modalBotaoExcluir, excluindo && styles.botaoDesabilitado]}
@@ -646,8 +697,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#E0E0E0",
     borderRadius: 8,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: "center",
+    justifyContent: "center",
   },
   modalBotaoCancelarTexto: {
     fontSize: 14,
@@ -658,8 +711,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#D32F2F",
     borderRadius: 8,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: "center",
+    justifyContent: "center",
   },
   modalBotaoExcluirTexto: {
     fontSize: 14,
@@ -675,8 +730,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#3B3BF5",
     borderRadius: 8,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: "center",
+    justifyContent: "center",
   },
   modalBotaoEditarTexto: {
     fontSize: 14,

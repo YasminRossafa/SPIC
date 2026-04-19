@@ -1,13 +1,12 @@
-import React from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { registerRootComponent } from "expo";
+import React from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import AppNavigator from "./src/navigation/AppNavigator";
 import AuthNavigator from "./src/navigation/AuthNavigator";
 
-// Error Boundary global: captura erros de JavaScript em qualquer componente
-// filho e exibe a mensagem na tela em vez de fechar o app
+// Error Boundary global: captura erros de JavaScript em qualquer componente filho
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { error: string | null }

@@ -1,14 +1,13 @@
-import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import GuideScreen from "../screens/onboarding/GuideScreen";
+import React from "react";
+import FaqScreen from "../screens/app/FaqScreen";
 import HomeScreen from "../screens/app/HomeScreen";
 import NewCategoryScreen from "../screens/app/NewCategoryScreen";
 import NewImageScreen from "../screens/app/NewImageScreen";
-import FaqScreen from "../screens/app/FaqScreen";
 import SettingsScreen from "../screens/app/SettingsScreen";
+import GuideScreen from "../screens/onboarding/GuideScreen";
 
 // Tipagem das rotas do app (após login)
-// Menu é um drawer animado dentro da HomeScreen, não uma rota separada
 export type AppStackParamList = {
   Guide: undefined;
   Home: undefined;
