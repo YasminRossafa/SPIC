@@ -1,17 +1,17 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ScrollView,
-  Linking,
-  ActivityIndicator,
-} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { doc, setDoc } from "firebase/firestore";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { AppStackParamList } from "../../navigation/AppNavigator";
@@ -183,7 +183,7 @@ export default function GuideScreen() {
           <ActivityIndicator color="#1A1A3E" />
         ) : (
           <Text style={styles.buttonText}>
-            {isLastPage ? "Começar" : "Próximo"}
+            {isLastPage ? "Vamos Lá!" : "Próximo"}
           </Text>
         )}
       </TouchableOpacity>

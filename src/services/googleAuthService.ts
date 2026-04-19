@@ -1,8 +1,7 @@
-import { Platform } from "react-native";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { AuthCredential, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { Platform } from "react-native";
 import { auth } from "../config/firebase";
-import { AuthCredential } from "firebase/auth";
 
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
 
@@ -18,8 +17,7 @@ export async function obterCredentialGoogle(): Promise<AuthCredential | null> {
   if (Platform.OS === "web") {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
-    // signInWithPopup já autentica direto — retorna null para indicar
-    // que o caller não precisa chamar loginComCredential
+    // signInWithPopup já autentica direto — retorna null para indicar que o caller não precisa chamar loginComCredential
     return null;
   }
 

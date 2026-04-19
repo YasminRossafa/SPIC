@@ -56,10 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // IMPORTANTE: busca tutorialVisto ANTES de setar o user, para que
-        // user e tutorialVisto sejam atualizados na mesma render. Caso
-        // contrário o AppNavigator monta com tutorialVisto=false (stale)
-        // e o initialRoute "Guide" fica travado mesmo após a leitura.
         let visto = false;
         try {
           const userDoc = await getDoc(doc(db, "usuarios", firebaseUser.uid));
@@ -84,15 +80,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email, senha);
   }
 
-  // Login com Google — recebe a credential já montada pelo componente
+  // Login com Google 
   async function loginComCredential(credential: AuthCredential) {
     await signInWithCredential(auth, credential);
   }
 
   // Cadastro com e-mail, senha e nome
   async function cadastrar(email: string, senha: string, nome: string) {
-    // Sinaliza ANTES de criar o usuário, pois onAuthStateChanged dispara
-    // imediatamente e causaria redirecionamento para Home antes de setar o flag
     setNovoCadastro(true);
     const { user: firebaseUser } = await createUserWithEmailAndPassword(
       auth,

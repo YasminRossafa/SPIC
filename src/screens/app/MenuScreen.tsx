@@ -25,8 +25,7 @@ interface MenuDrawerProps {
   onClose: () => void;
 }
 
-const CONTACT_EMAIL = "mimirossafa@gmail.com";
-const CONTACT_PHONE = "(11) 98650-0910";
+const CONTACT_EMAIL = "yasminrossafa85@estudante.ufscar.br";
 
 export default function MenuDrawer({ visible, onClose }: MenuDrawerProps) {
   const navigation = useNavigation<NavigationProp>();
@@ -136,11 +135,11 @@ export default function MenuDrawer({ visible, onClose }: MenuDrawerProps) {
             <Text style={styles.footerTitle}>Contato</Text>
 
             <TouchableOpacity onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)}>
-              <Text style={styles.footerItem}>✉️ {CONTACT_EMAIL}</Text>
+              <Text style={styles.contatoLink}>✉️ Enviar e-mail</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => Linking.openURL(`tel:${CONTACT_PHONE.replace(/\D/g, "")}`)}>
-              <Text style={styles.footerItem}>📞 {CONTACT_PHONE}</Text>
+            <TouchableOpacity onPress={() => Linking.openURL("https://www.ufscar.br")}>
+              <Text style={styles.contatoLink}>🎓 UFSCar Sorocaba</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -238,5 +237,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#3B3BF5",
     marginBottom: 8,
+  },
+  contatoLink: {
+    fontSize: 15,
+    color: "#3B3BF5",
+    marginTop: 8,
   },
 });

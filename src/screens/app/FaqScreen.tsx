@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
   LayoutAnimation,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
   UIManager,
+  View,
 } from "react-native";
 
 // Habilita LayoutAnimation no Android
@@ -54,7 +54,7 @@ const FAQ_DATA: FaqItem[] = [
   {
     pergunta: "As imagens precisam ser desenhos ou podem ser fotos reais?",
     resposta:
-      "Pesquisas indicam que imagens reais e personalizadas — como fotos dos próprios objetos, alimentos e pessoas da rotina da criança — facilitam a generalização do aprendizado. Por isso o SPIC foi pensado para que você use fotos reais da família e dos itens do dia a dia, tornando o sistema mais significativo e eficaz para cada criança.",
+      "Pesquisas indicam que imagens reais e personalizadas — como fotos dos próprios objetos, alimentos e pessoas da rotina da criança — facilitam a generalização do aprendizado. Por isso o SPIC foi pensado para que você use fotos reais da família e dos itens do dia a dia, tornando o sistema mais significativo e eficaz para cada criança. No entanto, é importante generalizar aos poucos.",
   },
   {
     pergunta: "O que faço se a criança não demonstrar interesse nas figuras?",
